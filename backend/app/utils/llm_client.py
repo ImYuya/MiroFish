@@ -1,6 +1,6 @@
 """
-LLM客户端封装
-统一使用OpenAI格式调用
+LLM client wrapper
+Unified calls using OpenAI format
 """
 
 import json
@@ -12,8 +12,8 @@ from ..config import Config
 
 
 class LLMClient:
-    """LLM客户端"""
-    
+    """LLM client"""
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -23,33 +23,33 @@ class LLMClient:
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = base_url or Config.LLM_BASE_URL
         self.model = model or Config.LLM_MODEL_NAME
-        
+
         if not self.api_key:
-            raise ValueError("LLM_API_KEY 未配置")
-        
+            raise ValueError("LLM_API_KEY is not configured")
+
         self.client = OpenAI(
             api_key=self.api_key,
             base_url=self.base_url
         )
-    
+
     def chat(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int = 4096,
+        max_tokens: int = 16384,
         response_format: Optional[Dict] = None
     ) -> str:
         """
-        发送聊天请求
-        
+        Send a chat request
+
         Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大token数
-            response_format: 响应格式（如JSON模式）
-            
+            messages: List of messages
+            temperature: Temperature parameter
+            max_tokens: Maximum number of tokens
+            response_format: Response format (e.g. JSON mode)
+
         Returns:
-            模型响应文本
+            Model response text
         """
         kwargs = {
             "model": self.model,
@@ -57,47 +57,80 @@ class LLMClient:
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        
+
         if response_format:
             kwargs["response_format"] = response_format
-        
+
         response = self.client.chat.completions.create(**kwargs)
-        content = response.choices[0].message.content
-        # 部分模型（如MiniMax M2.5）会在content中包含<think>思考内容，需要移除
+        msg = response.choices[0].message
+        content = msg.content or ""
+
+        # Some thinking models (e.g. qwen3.5) put the answer in a "reasoning"
+        # field and leave content empty.  Fall back to reasoning if content is
+        # blank after cleaning.
+        if not content.strip():
+            reasoning = getattr(msg, 'reasoning', None) or ""
+            if reasoning:
+                content = reasoning
+
+        # Remove <think> blocks from reasoning models (MiniMax, GLM, etc.)
         content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
         return content
-    
+
     def chat_json(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.3,
-        max_tokens: int = 4096
+        max_tokens: int = 16384
     ) -> Dict[str, Any]:
         """
-        发送聊天请求并返回JSON
-        
+        Send a chat request and return JSON
+
         Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大token数
-            
+            messages: List of messages
+            temperature: Temperature parameter
+            max_tokens: Maximum number of tokens
+
         Returns:
-            解析后的JSON对象
+            Parsed JSON object
         """
+        # Try with response_format first; fall back to plain chat if it
+        # returns empty (some Ollama models ignore response_format).
         response = self.chat(
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
             response_format={"type": "json_object"}
         )
-        # 清理markdown代码块标记
+
+        if not response.strip():
+            # Retry without response_format constraint
+            response = self.chat(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        # Clean markdown code blocks
         cleaned_response = response.strip()
         cleaned_response = re.sub(r'^```(?:json)?\s*\n?', '', cleaned_response, flags=re.IGNORECASE)
         cleaned_response = re.sub(r'\n?```\s*$', '', cleaned_response)
         cleaned_response = cleaned_response.strip()
 
-        try:
-            return json.loads(cleaned_response)
-        except json.JSONDecodeError:
-            raise ValueError(f"LLM返回的JSON格式无效: {cleaned_response}")
+        # Extract first JSON object from mixed text (e.g. thinking + JSON)
+        if cleaned_response:
+            # Try direct parse first
+            try:
+                return json.loads(cleaned_response)
+            except json.JSONDecodeError:
+                pass
 
+            # Try to find JSON object in the text
+            match = re.search(r'\{[\s\S]*\}', cleaned_response)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except json.JSONDecodeError:
+                    pass
+
+        raise ValueError(f"Invalid JSON returned by LLM: {cleaned_response[:500]}")
