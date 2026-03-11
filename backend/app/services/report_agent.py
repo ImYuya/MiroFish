@@ -2143,7 +2143,10 @@ class ReportManager:
         
         if not content:
             return content
-        
+
+        # Remove any leftover <tool_call> blocks from LLM output
+        content = re.sub(r'<tool_call>.*?</tool_call>\s*', '', content, flags=re.DOTALL)
+
         content = content.strip()
         lines = content.split('\n')
         cleaned_lines = []
@@ -2310,11 +2313,14 @@ class ReportManager:
             Processed content
         """
         import re
-        
+
+        # Remove any leftover <tool_call> blocks
+        content = re.sub(r'<tool_call>.*?</tool_call>\s*', '', content, flags=re.DOTALL)
+
         lines = content.split('\n')
         processed_lines = []
         prev_was_heading = False
-        
+
         # Collect all section titles from the outline
         section_titles = set()
         for section in outline.sections:

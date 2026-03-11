@@ -9,7 +9,7 @@ import warnings
 # Must be set before all other imports
 warnings.filterwarnings("ignore", message=".*resource_tracker.*")
 
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 
 from .config import Config
@@ -72,6 +72,20 @@ def create_app(config_class=Config):
     @app.route('/health')
     def health():
         return {'status': 'ok', 'service': 'MiroFish Backend'}
+
+    # Serve frontend static files (production: built Vue app)
+    frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'frontend', 'dist')
+    if os.path.isdir(frontend_dist):
+        @app.route('/', defaults={'path': ''})
+        @app.route('/<path:path>')
+        def serve_frontend(path):
+            file_path = os.path.join(frontend_dist, path)
+            if path and os.path.isfile(file_path):
+                return send_from_directory(frontend_dist, path)
+            return send_from_directory(frontend_dist, 'index.html')
+
+        if should_log_startup:
+            logger.info(f"Serving frontend from {frontend_dist}")
 
     if should_log_startup:
         logger.info("MiroFish Backend startup complete")
