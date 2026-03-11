@@ -4,6 +4,9 @@ services:
     container_name: mirofish
     env_file:
       - .env
+    environment:
+      # Override localhost → host.docker.internal so .env works for both local and Docker
+      - LLM_BASE_URL=http://host.docker.internal:11434/v1
     ports:
       - "5001:5001"
     restart: unless-stopped
