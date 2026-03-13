@@ -870,8 +870,8 @@ class ReportAgent:
     3. Reflection phase: Check content completeness and accuracy
     """
 
-    # Maximum tool calls per section
-    MAX_TOOL_CALLS_PER_SECTION = 5
+    # Maximum tool calls per section (configurable via env REPORT_AGENT_MAX_TOOL_CALLS)
+    MAX_TOOL_CALLS_PER_SECTION = Config.REPORT_AGENT_MAX_TOOL_CALLS
 
     # Maximum reflection rounds
     MAX_REFLECTION_ROUNDS = 3
@@ -1281,8 +1281,8 @@ class ReportAgent:
         
         # ReACT loop
         tool_calls_count = 0
-        max_iterations = 5  # Maximum iteration rounds
-        min_tool_calls = 3  # Minimum tool call count
+        max_iterations = Config.REPORT_AGENT_MAX_ITERATIONS
+        min_tool_calls = Config.REPORT_AGENT_MIN_TOOL_CALLS
         conflict_retries = 0  # Consecutive conflict count when tool call and Final Answer appear together
         used_tools = set()  # Track used tool names
         all_tools = {"insight_forge", "panorama_search", "quick_search", "interview_agents"}
@@ -1301,7 +1301,7 @@ class ReportAgent:
             # Call LLM
             response = self.llm.chat(
                 messages=messages,
-                temperature=0.5,
+                temperature=Config.REPORT_AGENT_TEMPERATURE,
             )
 
             # Check if LLM returned None (API error or empty content)
@@ -1503,7 +1503,7 @@ class ReportAgent:
         
         response = self.llm.chat(
             messages=messages,
-            temperature=0.5,
+            temperature=Config.REPORT_AGENT_TEMPERATURE,
         )
 
         # Check if LLM returned None during forced conclusion
@@ -1823,9 +1823,9 @@ class ReportAgent:
         for iteration in range(max_iterations):
             response = self.llm.chat(
                 messages=messages,
-                temperature=0.5
+                temperature=Config.REPORT_AGENT_TEMPERATURE
             )
-            
+
             # Parse tool calls
             tool_calls = self._parse_tool_calls(response)
             
@@ -1863,7 +1863,7 @@ class ReportAgent:
         # Reached max iterations, get final response
         final_response = self.llm.chat(
             messages=messages,
-            temperature=0.5
+            temperature=Config.REPORT_AGENT_TEMPERATURE
         )
         
         # Clean response
