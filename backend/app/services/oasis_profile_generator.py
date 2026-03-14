@@ -634,7 +634,7 @@ class OasisProfileGenerator:
 
     def _get_system_prompt(self, is_individual: bool) -> str:
         """Get the system prompt"""
-        base_prompt = "You are a social media user profile generation expert. Generate detailed, realistic personas for opinion simulation that maximally restore existing real-world conditions. You must return valid JSON format, and all string values must not contain unescaped newline characters. Use Chinese."
+        base_prompt = "You are a social media user profile generation expert. Generate detailed, realistic personas for opinion simulation that maximally restore existing real-world conditions. You must return valid JSON format, and all string values must not contain unescaped newline characters. Use English."
         return base_prompt
 
     def _build_individual_persona_prompt(
@@ -674,14 +674,14 @@ Please generate JSON containing the following fields:
 3. age: Age as a number (must be an integer)
 4. gender: Gender, must be in English: "male" or "female"
 5. mbti: MBTI type (e.g., INTJ, ENFP, etc.)
-6. country: Country (use Chinese, e.g., "China")
+6. country: Country (e.g., "China", "United States")
 7. profession: Occupation
 8. interested_topics: Array of topics of interest
 
 Important:
 - All field values must be strings or numbers, do not use newline characters
 - persona must be a coherent text description
-- Use Chinese (except the gender field which must use English male/female)
+- Use English for all fields
 - Content must be consistent with the entity information
 - age must be a valid integer, gender must be "male" or "female"
 """
@@ -723,14 +723,14 @@ Please generate JSON containing the following fields:
 3. age: Fixed at 30 (virtual age for institutional accounts)
 4. gender: Fixed as "other" (institutional accounts use "other" to indicate non-personal)
 5. mbti: MBTI type, used to describe account style, e.g., ISTJ for rigorous and conservative
-6. country: Country (use Chinese, e.g., "China")
+6. country: Country (e.g., "China", "United States")
 7. profession: Institutional function description
 8. interested_topics: Array of areas of interest
 
 Important:
 - All field values must be strings or numbers, null values are not allowed
 - persona must be a coherent text description, do not use newline characters
-- Use Chinese (except the gender field which must use English "other")
+- Use English for all fields
 - age must be the integer 30, gender must be the string "other"
 - Institutional account communications must align with its identity positioning"""
 
